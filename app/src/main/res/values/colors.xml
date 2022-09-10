@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="deep_red">#ffaf889b</color>
+    <color name="deep2_red">#ff935e72</color>
+    <color name="deep_gray">#ff5b5a82</color>
+    <color name="gray">#ff868ab9</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#fff0eeef</color>
+</resources>
