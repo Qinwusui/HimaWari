@@ -52,13 +52,14 @@ fun NavScreen(mainViewModel: MainViewModel = viewModel()) {
     Scaffold(topBar = {
         CenterAlignedTopAppBar(
             title = {
-                Text(text = "\uD83C\uDF3B ${navList[pagerState.currentPage].screen.title} \uD83C\uDF3B ")
+                Text(text = "\uD83C\uDF3B ${navList[pagerState.currentPage].screen.title} \uD83C\uDF3B ", color = Color.White)
             },
             actions = {},
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = gray),
         )
     }, bottomBar = {
-        BottomAppBar(modifier = Modifier.fillMaxWidth()) {
+        BottomAppBar(modifier = Modifier.fillMaxWidth(), containerColor = Color.Transparent) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

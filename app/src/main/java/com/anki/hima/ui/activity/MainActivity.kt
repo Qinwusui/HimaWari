@@ -1,4 +1,4 @@
-package com.anki.hima
+package com.anki.hima.ui.activity
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE

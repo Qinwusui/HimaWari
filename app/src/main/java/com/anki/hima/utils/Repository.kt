@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.coroutines.CoroutineContext
 
@@ -130,6 +129,14 @@ object Repository {
         val success: Boolean,
         val msg: String
     )
+
+    @Serializable
+    data class MessageScreenData(
+        val name: String,
+        val iconUrl: String,
+        val simpleText: String
+    )
+
 
     /**
      *      泛型方法，用于自定义协程所在线程
