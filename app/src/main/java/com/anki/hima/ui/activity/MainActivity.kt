@@ -23,26 +23,21 @@ import androidx.core.content.ContextCompat
 import com.anki.hima.ui.screens.NavScreen
 import com.anki.hima.ui.theme.HimaWariTheme
 import com.anki.hima.utils.toastShort
+import com.anki.hima.viewmodel.ChatViewModel
 import com.anki.hima.viewmodel.MainViewModel
 
 
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel by viewModels<MainViewModel>()
+    private val chatViewModel by viewModels<ChatViewModel> ()
     private val request =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            it.forEach { (t, u) ->
-                if (!u) {
-                    "$t 没有被授权哦！".toastShort()
-                }
-            }
-        }
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!checkPermission()) {
-            "没有权限".toastShort()
             requestPermission()
         }
         setContent {
@@ -52,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NavScreen(mainViewModel)
+                    NavScreen(mainViewModel,chatViewModel)
                 }
             }
         }

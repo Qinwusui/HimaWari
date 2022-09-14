@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.anki.hima.utils.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
@@ -23,13 +22,23 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
         }
     }
 
-    private val _sign = MutableStateFlow(false)
-    val sign = _sign.asStateFlow()
-    fun signIn(uName: String, pwd: String) {
+    fun login(uName: String, pwd: String) {
         viewModelScope.launch {
-            repo.signIn(uName, pwd).collect{
-                _sign.value=it
+            repo.login(uName, pwd).collect {
+                _login.value = it
             }
         }
     }
+
+    private val _sign = MutableStateFlow(false)
+    val sign = _sign.asStateFlow()
+    fun signIn(uName: String, qq: String, pwd: String) {
+        viewModelScope.launch {
+            repo.signIn(uName, qq, pwd).collect {
+                _sign.value = it
+            }
+        }
+    }
+
+    fun getUserInfo(needQQ: Boolean) = repo.getUserInfo(needQQ)
 }

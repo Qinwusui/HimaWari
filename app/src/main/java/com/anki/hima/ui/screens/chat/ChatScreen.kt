@@ -15,40 +15,42 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.anki.hima.ui.activity.ChatActivity
-import com.anki.hima.ui.theme.deep2_red
-import com.anki.hima.ui.theme.deep_gray
 import com.anki.hima.ui.theme.deep_red
 import com.anki.hima.ui.theme.gray
 import com.anki.hima.viewmodel.ChatViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.john.waveview.WaveView
+import kotlinx.coroutines.launch
 
 @ExperimentalMaterial3Api
 @Composable
 fun ChatScreen(chatViewModel: ChatViewModel = viewModel(), activity: ChatActivity) {
+    val msgList by chatViewModel.receiveData.collectAsState()
+
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val systemUiController = rememberSystemUiController()
     SideEffect {
         systemUiController.setSystemBarsColor(gray, false)
     }
     Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
-        CenterAlignedTopAppBar(title = {
-            Text("Chat", color = Color.White)
-        }, navigationIcon = {
-            IconButton(onClick = {
-                activity.finish()
-            }) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
+        CenterAlignedTopAppBar(
+            title = {
+                Text("Chat", color = Color.White)
+            }, navigationIcon = {
+                IconButton(onClick = {
+                    activity.finish()
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
         }, actions = {
             IconButton(onClick = {}) {
                 Icon(
@@ -99,16 +101,25 @@ fun ChatScreen(chatViewModel: ChatViewModel = viewModel(), activity: ChatActivit
                             cursorColor = Color.White,
                             placeholderColor = Color.Transparent,
                             unfocusedLabelColor = Color.White.copy(0.5f),
-                            focusedLabelColor = Color.White.copy(alpha = 0.4f),
+                            focusedLabelColor = Color.White.copy(alpha = 0.6f),
                             focusedIndicatorColor = Color.Transparent
                         ),
 
                         trailingIcon = {
-                            IconButton(onClick = {  }) {
+                            IconButton(onClick = {
+                                chatViewModel.sendMsg(input)
+                                input = ""
+                                scope.launch {
+                                    listState.animateScrollToItem(
+                                        if (msgList.size > 2) msgList.size - 1 else msgList.size,
+                                        scrollOffset = 20
+                                    )
+                                }
+                            }) {
                                 Icon(
                                     imageVector = Icons.Default.Send,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.5f)
+                                    tint = Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -126,8 +137,9 @@ fun ChatScreen(chatViewModel: ChatViewModel = viewModel(), activity: ChatActivit
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
         ) {
-            itemsIndexed((0..1).toList()) { i, x ->
-                val ori = if (i % 2 == 0) {
+            itemsIndexed(msgList) { i, x ->
+                val ori = x.nickName != chatViewModel.getNickName()
+                val shape = if (ori) {
                     RoundedCornerShape(
                         10.dp,
                         10.dp,
@@ -142,46 +154,41 @@ fun ChatScreen(chatViewModel: ChatViewModel = viewModel(), activity: ChatActivit
                         10.dp
                     )
                 }
-                val color = listOf(gray, deep_red, deep2_red, deep_gray).random()
-                val align = if (i % 2 == 0) {
+                val color = if (ori) {
+                    gray
+                } else {
+                    deep_red
+                }
+                val align = if (ori) {
                     Alignment.Start
                 } else {
                     Alignment.End
                 }
-                val textAlign = if (i % 2 == 0) {
-                    TextAlign.Start
-                } else {
-                    TextAlign.End
-                }
-                val text = if (i % 2 == 0) {
-                    "长安流水下江南"
-                } else {
-                    "江南依旧在，只是流水不长安"
-                }
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp)) {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 4.dp)
+                ) {
                     Surface(
                         modifier = Modifier
                             .padding(horizontal = 10.dp)
                             .align(align)
                     ) {
                         Text(
-                            text = if (i % 2 == 0) "琪琪" else "林林",
-                            textAlign = textAlign,
-                            color = color.copy(alpha = 0.6f)
+                            text = x.nickName,
+                            color = Color.Black.copy(alpha = 0.6f)
                         )
                     }
                     Surface(
-                        shape = ori,
+                        shape = shape,
                         color = color,
                         modifier = Modifier
                             .padding(horizontal = 10.dp)
                             .align(align)
                     ) {
                         Text(
-                            text = text,
-                            textAlign = textAlign,
+                            text = x.msg,
                             modifier = Modifier.padding(10.dp),
                             color = Color.White
                         )

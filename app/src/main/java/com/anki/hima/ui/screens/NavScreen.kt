@@ -20,6 +20,7 @@ import com.anki.hima.R
 import com.anki.hima.ui.Screen
 import com.anki.hima.ui.theme.deep_gray
 import com.anki.hima.ui.theme.gray
+import com.anki.hima.viewmodel.ChatViewModel
 import com.anki.hima.viewmodel.MainViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -35,7 +36,7 @@ data class BottomItem(
 @OptIn(ExperimentalPagerApi::class)
 @ExperimentalMaterial3Api
 @Composable
-fun NavScreen(mainViewModel: MainViewModel = viewModel()) {
+fun NavScreen(mainViewModel: MainViewModel, chatViewModel: ChatViewModel) {
     val systemUiController = rememberSystemUiController()
     LaunchedEffect(key1 = systemUiController, block = {
         systemUiController.setSystemBarsColor(gray, false)
