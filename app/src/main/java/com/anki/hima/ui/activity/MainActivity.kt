@@ -20,17 +20,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.anki.hima.ui.screens.NavScreen
+import com.anki.hima.ui.screens.chat.ChatScreen
 import com.anki.hima.ui.theme.HimaWariTheme
-import com.anki.hima.utils.toastShort
-import com.anki.hima.viewmodel.ChatViewModel
 import com.anki.hima.viewmodel.MainViewModel
 
 
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel by viewModels<MainViewModel>()
-    private val chatViewModel by viewModels<ChatViewModel> ()
     private val request =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
         if (!checkPermission()) {
             requestPermission()
         }
+
         setContent {
             HimaWariTheme {
                 // A surface container using the 'background' color from the theme
@@ -47,7 +49,19 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NavScreen(mainViewModel,chatViewModel)
+                    val navController = rememberNavController()
+                    NavHost(
+                        navController = navController,
+                        startDestination = NavScreen.MainView.route,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        composable(NavScreen.MainView.route) {
+                            NavScreen(mainViewModel = mainViewModel, navController = navController)
+                        }
+                        composable(NavScreen.ChatView.route) {
+                            ChatScreen(mainViewModel = mainViewModel, navController = navController)
+                        }
+                    }
                 }
             }
         }
@@ -79,6 +93,5 @@ class MainActivity : ComponentActivity() {
         }
 
     }
-
 
 }

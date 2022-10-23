@@ -1,32 +1,50 @@
 package com.anki.hima.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.anki.hima.R
 import com.anki.hima.ui.theme.gray
-import com.anki.hima.utils.loge
 import com.anki.hima.utils.toastShort
 import com.anki.hima.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
+fun AboutScreen(mainViewModel: MainViewModel) {
     val listState = rememberLazyListState()
-    val sign by mainViewModel.sign.collectAsState()
-
-    val login by mainViewModel.login.collectAsState()
+    val sign = mainViewModel.sign
+    val login = mainViewModel.login
     var uName by remember {
         mutableStateOf("")
     }
@@ -36,107 +54,29 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
     var pwd by remember {
         mutableStateOf("")
     }
-    var needLogin by remember {
-        mutableStateOf(false)
-    }
     var needSignIn by remember {
         mutableStateOf(false)
     }
-    if (sign) {
-        uName = ""
-        pwd = ""
-        qq = ""
-        needSignIn = false
+    DisposableEffect(key1 = sign) {
+        if (sign) {
+            needSignIn = false
+        }
+        onDispose {
+
+        }
     }
-
-    if (login) {
-        needLogin = false
-        uName = ""
-        pwd = ""
-        qq = ""
-    }
-
-    AnimatedVisibility(visible = needLogin) {
-        AlertDialog(
-            onDismissRequest = { needSignIn = false },
-            containerColor = gray,
-            title = {
-                Text(text = "SignIn", color = Color.White)
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
-                ) {
-                    TextField(
-                        value = uName,
-                        onValueChange = {
-                            uName = it
-                        },
-                        label = {
-                            Text(text = "UserName", color = Color.White.copy(alpha = 0.4f))
-                        },
-                        colors = TextFieldDefaults.textFieldColors(
-                            textColor = Color.White.copy(alpha = 0.8f),
-                            containerColor = Color.Transparent,
-                            cursorColor = Color.White,
-                            placeholderColor = Color.Transparent,
-                            unfocusedLabelColor = Color.White.copy(0.5f),
-                            focusedLabelColor = Color.White.copy(alpha = 0.6f),
-                            focusedIndicatorColor = Color.White
-                        ),
-                    )
-
-                    TextField(
-                        value = pwd,
-                        onValueChange = {
-                            pwd = it
-
-                        },
-                        label = {
-                            Text(text = "Password", color = Color.White.copy(alpha = 0.4f))
-                        },
-                        colors = TextFieldDefaults.textFieldColors(
-                            textColor = Color.White.copy(alpha = 0.8f),
-                            containerColor = Color.Transparent,
-                            cursorColor = Color.White,
-                            placeholderColor = Color.Transparent,
-                            unfocusedLabelColor = Color.White.copy(0.5f),
-                            focusedLabelColor = Color.White.copy(alpha = 0.6f),
-                            focusedIndicatorColor = Color.White
-                        ),
-                    )
-                }
-
-            },
-            confirmButton = {
-                Row {
-
-                    TextButton(onClick = {
-                        mainViewModel.login(uName, pwd)
-                        needLogin = false
-                    }) {
-                        Text(text = "Login", color = Color.White)
-                    }
-                }
-
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    needLogin = false
-                }) {
-                    Text(text = "Cancel")
-                }
-            })
+    DisposableEffect(key1 = login) {
+        if (login) {
+            needSignIn = false
+        }
+        onDispose {}
     }
     AnimatedVisibility(visible = needSignIn) {
-
         AlertDialog(
             onDismissRequest = { needSignIn = false },
             containerColor = gray,
             title = {
-                Text(text = "SignIn", color = Color.White)
+                Text(text = "注册", color = Color.White)
             },
             text = {
                 Column(
@@ -150,7 +90,7 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
                             uName = it
                         },
                         label = {
-                            Text(text = "UserName", color = Color.White.copy(alpha = 0.4f))
+                            Text(text = "用户名", color = Color.White.copy(alpha = 0.4f))
                         },
                         colors = TextFieldDefaults.textFieldColors(
                             textColor = Color.White.copy(alpha = 0.8f),
@@ -169,7 +109,7 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
 
                         },
                         label = {
-                            Text(text = "QQ", color = Color.White.copy(alpha = 0.4f))
+                            Text(text = "QQ号", color = Color.White.copy(alpha = 0.4f))
                         },
                         colors = TextFieldDefaults.textFieldColors(
                             textColor = Color.White.copy(alpha = 0.8f),
@@ -188,7 +128,7 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
 
                         },
                         label = {
-                            Text(text = "Password", color = Color.White.copy(alpha = 0.4f))
+                            Text(text = "密码", color = Color.White.copy(alpha = 0.4f))
                         },
                         colors = TextFieldDefaults.textFieldColors(
                             textColor = Color.White.copy(alpha = 0.8f),
@@ -206,23 +146,20 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
             confirmButton = {
                 Row {
                     TextButton(onClick = { needSignIn = false }) {
-                        Text(text = "Cancel", color = Color.White)
+                        Text(text = "取消", color = Color.White)
                     }
                     TextButton(onClick = {
                         mainViewModel.signIn(uName, qq, pwd)
                     }) {
-                        Text(text = "Sign In", color = Color.White)
+                        Text(text = "注册", color = Color.White)
+                    }
+                    TextButton(onClick = {
+                        mainViewModel.login(uName, qq, pwd)
+                    }) {
+                        Text(text = "登录", color = Color.White)
                     }
                 }
 
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    needSignIn = false
-                    needLogin = true
-                }) {
-                    Text(text = "Login")
-                }
             })
     }
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -235,27 +172,36 @@ fun AboutScreen(mainViewModel: MainViewModel = viewModel()) {
                 ) {
                     Card(
                         modifier = Modifier
-                            .size(100.dp)
-                            .clickable {
-                                if (login) {
-                                    "你已登录".toastShort()
-                                } else {
-                                    needSignIn = true
-                                }
-                            }, shape = RoundedCornerShape(50.dp)
+                            .size(100.dp), shape = RoundedCornerShape(50.dp)
                     ) {
                         AsyncImage(
-                            model = "https://q2.qlogo.cn/headimg_dl?dst_uin=${
-                                mainViewModel.getUserInfo(
-                                    true
-                                )
-                            }&spec=100",
+                            model = if (login) "https://q2.qlogo.cn/headimg_dl?dst_uin=${
+                                mainViewModel.getQQ() 
+                            }&spec=100" else R.drawable.ic_launcher_foreground,
                             contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (login) {
+                                            "你已经登录过了".toastShort()
+                                        } else {
+                                            needSignIn = true
+                                        }
+                                    },
+                                    onLongClick = {
+                                        mainViewModel.logOut()
+
+                                    }),
                             contentScale = ContentScale.Crop
                         )
-                    }
 
+                    }
+                    Column {
+
+                        Text(text = if (mainViewModel.login) mainViewModel.getNickName() else "点击头像登录&注册")
+                        Text(text = if (mainViewModel.login) mainViewModel.getQQ() else "Guest")
+                    }
                 }
             }
         }

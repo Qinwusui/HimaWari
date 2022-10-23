@@ -1,11 +1,26 @@
 package com.anki.hima.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,11 +31,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.anki.hima.R
 import com.anki.hima.ui.Screen
+import com.anki.hima.ui.screens.chat.ChatScreen
 import com.anki.hima.ui.theme.deep_gray
 import com.anki.hima.ui.theme.gray
-import com.anki.hima.viewmodel.ChatViewModel
 import com.anki.hima.viewmodel.MainViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -33,10 +53,11 @@ data class BottomItem(
     val screen: Screen,
 )
 
-@OptIn(ExperimentalPagerApi::class)
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@OptIn(ExperimentalPagerApi::class, ExperimentalMaterialApi::class)
 @ExperimentalMaterial3Api
 @Composable
-fun NavScreen(mainViewModel: MainViewModel, chatViewModel: ChatViewModel) {
+fun NavScreen(mainViewModel: MainViewModel, navController:NavHostController) {
     val systemUiController = rememberSystemUiController()
     LaunchedEffect(key1 = systemUiController, block = {
         systemUiController.setSystemBarsColor(gray, false)
@@ -50,6 +71,8 @@ fun NavScreen(mainViewModel: MainViewModel, chatViewModel: ChatViewModel) {
     val pagerState =
         rememberPagerState()
     val scope = rememberCoroutineScope()
+
+
     Scaffold(topBar = {
         CenterAlignedTopAppBar(
             title = {
@@ -105,19 +128,26 @@ fun NavScreen(mainViewModel: MainViewModel, chatViewModel: ChatViewModel) {
 
             }
         }
-    }) {
+    }) { pad ->
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = true,
-            contentPadding = it,
-            count = navList.size
+            contentPadding = pad,
+            count = navList.size,
+
         ) { page ->
             when (page) {
-                0 -> MessageScreen()
-                1 -> ContactScreen()
-                2 -> GroupScreen()
-                3 -> AboutScreen()
+                0 -> MessageScreen(mainViewModel,navController)
+                1 -> ContactScreen(mainViewModel,navController)
+                2 -> GroupScreen(mainViewModel,navController)
+                3 -> AboutScreen(mainViewModel)
             }
         }
+
     }
+}
+
+sealed class NavScreen(val route: String) {
+    object MainView : NavScreen("mainView")
+    object ChatView : NavScreen("chatView")
 }
