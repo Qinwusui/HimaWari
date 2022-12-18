@@ -10,6 +10,10 @@ import com.anki.hima.utils.MsgListManager
 import com.anki.hima.utils.Repository
 import com.anki.hima.utils.bean.Group
 import com.anki.hima.utils.bean.GroupList
+import com.anki.hima.utils.bean.ResFriendList
+import com.anki.hima.utils.bean.ResInfo
+import com.anki.hima.utils.bean.VerifyInfo
+import com.anki.hima.utils.bean.VerifyList
 import com.anki.hima.utils.dao.MsgDataBase
 import com.anki.hima.utils.dao.SimpleMsg
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,11 +50,8 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
     private val _chatRoomMsgList = MutableStateFlow(mutableListOf<MsgDataBase>())
     val chatRoomMsgList = _chatRoomMsgList.asStateFlow()
 
-    var signData by mutableStateOf("")
-    var loginData by mutableStateOf("")
-
-    var msgData = MutableStateFlow(MsgDataBase(null, "", "", "", "", ""))
-        private set
+    private val _msgData = MutableStateFlow(MsgDataBase(null, "", "", "", "", ""))
+    val msgData = _msgData.asStateFlow()
 
     //初始化操作
     init {
@@ -58,15 +59,29 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
         getGroupList() //读取群组列表
         initWebSocket()
         loadSimpleMsgList()
+        getQQ()
+        getNickName()
     }
 
     //连接到聊天室并且持续收取消息
     private fun initWebSocket() {
         viewModelScope.launch {
             repo.initWsSession()
+
             repo.receive().collect {
                 _chatRoomMsgList.value.add(it)
-                msgData.value = it
+                _msgData.value = it
+                if (_simpleMsgList.value.size == 0) {
+                    _simpleMsgList.value.add(
+                        SimpleMsg(
+                            it.msgIndex,
+                            it.nickName,
+                            it.time,
+                            it.chatRoomId
+                        )
+                    )
+
+                }
             }
         }
     }
@@ -82,7 +97,6 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
     fun loadMsgList() {
         viewModelScope.launch {
             MsgListManager.getMsgList(chatRoomId).collect {
-                _chatRoomMsgList.value = mutableListOf()
                 _chatRoomMsgList.value = it.toMutableList()
             }
         }
@@ -91,12 +105,32 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
     /////////////////////////////////////用户发送消息//////////////////////////////////
     fun sendMsg(msg: String) {
         viewModelScope.launch {
-            repo.sendMsg(getNickName(), chatRoomId, getQQ(), msg)
+            repo.sendMsg(_name.value, chatRoomId, _qq.value, msg)
         }
     }
 
-    fun getNickName() = repo.getInfo(0)
-    fun getQQ() = repo.getInfo(1)
+    private val _name = MutableStateFlow("")
+    val name = _name.asStateFlow()
+    fun getNickName() {
+        viewModelScope.launch {
+            repo.requestUname().collect {
+                _name.value = it.msg
+            }
+        }
+    }
+
+    private val _qq = MutableStateFlow("")
+    val qq = _qq.asStateFlow()
+
+    //获取QQ
+    fun getQQ() {
+        viewModelScope.launch {
+            repo.requestQQ().collect {
+                _qq.value = it.msg
+            }
+        }
+    }
+
 
     fun changeChatRoomId(chatRoomId: String) {
         this.chatRoomId = chatRoomId
@@ -104,25 +138,24 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
 
     ///////////////////////////////////////用户注册登录，用户自动登录//////////////////////////////
 
-    var sign by mutableStateOf(false)
-        private set
-    var login by mutableStateOf(false)
-        private set
-
+    private val _sign = MutableStateFlow(false)
+    val sign = _sign.asStateFlow()
+    private val _login = MutableStateFlow(false)
+    val login = _login.asStateFlow()
     private fun autoLogin() {
         viewModelScope.launch {
             repo.autoLogin().collect {
-                login = it
+                _login.value = it
             }
         }
     }
 
-    fun login(uName: String, qq: String, pwd: String) {
+    fun login(qq: String, pwd: String) {
         viewModelScope.launch {
-            repo.login(uName, qq, pwd).collect {
-                login = it
+            repo.login(qq, pwd).collect {
+                _login.value = it
                 if (it) {
-                    repo.initWsSession()
+                    initWebSocket()
                 }
             }
         }
@@ -131,7 +164,7 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
     fun signIn(uName: String, qq: String, pwd: String) {
         viewModelScope.launch {
             repo.signIn(uName, qq, pwd).collect {
-                sign = it
+                _sign.value = it
             }
         }
     }
@@ -140,8 +173,8 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
         viewModelScope.launch {
             repo.logOut()
         }
-        login = false
-
+        _login.value = false
+        _sign.value = false
     }
 
     ///////////////////////////////////////////////////////////群组列表/////////////////////////////////////////////////////////////////
@@ -149,6 +182,67 @@ class MainViewModel(private val repo: Repository = Repository) : ViewModel() {
     private fun getGroupList() = viewModelScope.launch {
         repo.getGroupList().collect {
             _groupList.value = it
+        }
+    }
+    ///////////////////////////////////////////////////////怎么解决用户离线后消息缓存？//////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////获取好友列表//////////////////////////////////////////////////////
+    private val _friendsList = MutableStateFlow(ResFriendList())
+    val friendList = _friendsList.asStateFlow()
+
+    //获取好友列表
+    fun queryFriendList(str: String) {
+        viewModelScope.launch {
+            if (str != "") {
+                repo.queryFriends(str).collect {
+                    _friendsList.value = it
+                }
+            }
+        }
+    }
+
+    private val _verifyList = MutableStateFlow(VerifyList())
+    val verifyList = _verifyList.asStateFlow()
+    fun queryVerifyList(qq: String) {
+        viewModelScope.launch {
+            repo.queryVerifyMsg(qq).collect {
+                _verifyList.value = it
+            }
+        }
+    }
+
+    private val _verifyMsg = MutableStateFlow(ResInfo())
+    val verifyMsg = _verifyMsg.asStateFlow()
+
+    //发送添加好友请求
+    fun sendAddFriendMsg(from: String, to: String, verifyMsg: String) {
+        viewModelScope.launch {
+            repo.addFriend(from, to, verifyMsg).collect {
+                _verifyMsg.value = it
+            }
+        }
+    }
+
+    private val _respVerifyMsg = MutableStateFlow(ResInfo())
+    val respVerifyResp = _respVerifyMsg.asStateFlow()
+
+    //回应验证消息
+    fun respVerifyMsg(verifyInfo: VerifyInfo, admit: Boolean) {
+        viewModelScope.launch {
+            repo.respVerifyMsg(verifyInfo, admit).collect {
+                _respVerifyMsg.value = it
+            }
+        }
+    }
+
+    //模糊查询用户
+    private val _respSearchList = MutableStateFlow(ResFriendList())
+    val respSearchList = _respSearchList.asStateFlow()
+    fun querySearchUserList(qq: String) {
+        viewModelScope.launch {
+            repo.querySearchList(qq).collect {
+                _respSearchList.value = it
+            }
         }
     }
 }

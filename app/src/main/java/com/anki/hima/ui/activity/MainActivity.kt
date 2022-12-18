@@ -25,6 +25,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.anki.hima.ui.screens.NavScreen
 import com.anki.hima.ui.screens.chat.ChatScreen
+import com.anki.hima.ui.screens.user.UserScreen
+import com.anki.hima.ui.screens.user.UserSearchScreen
 import com.anki.hima.ui.theme.HimaWariTheme
 import com.anki.hima.viewmodel.MainViewModel
 
@@ -61,6 +63,15 @@ class MainActivity : ComponentActivity() {
                         composable(NavScreen.ChatView.route) {
                             ChatScreen(mainViewModel = mainViewModel, navController = navController)
                         }
+                        composable(NavScreen.UserView.route) {
+                            UserScreen(mainViewModel = mainViewModel, navController = navController)
+                        }
+                        composable(NavScreen.UserSearchView.route) {
+                            UserSearchScreen(
+                                mainViewModel = mainViewModel,
+                                navController = navController
+                            )
+                        }
                     }
                 }
             }
@@ -86,8 +97,8 @@ class MainActivity : ComponentActivity() {
         )
         request.launch(permissions)
         if (SDK_INT >= Build.VERSION_CODES.R) {
-            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-            intent.addCategory("android.intent.category.DEFAULT");
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            intent.addCategory("android.intent.category.DEFAULT")
             intent.data = Uri.parse("package:${applicationContext.packageName}")
             startActivity(intent)
         }

@@ -1,7 +1,6 @@
 package com.anki.hima.utils.bean
 
 
-
 /**
  * 发送给服务器的数据对象
  */
@@ -13,13 +12,38 @@ data class MsgData(
     val qq: String
 )
 
-/**
- * 注册请求体
- *
- *      用户名||密码||时间
- */
+
 data class SignInfo(
     val content: String = ""
+)
+
+data class FriendItem(
+    val qq: String,
+    val uName: String
+)
+
+data class ResFriendList(
+    val code: Int = -1,
+    val success: Boolean = false,
+    val list: MutableList<FriendItem> = mutableListOf()
+)
+
+data class VerifyInfo(
+    val from: String,
+    val to: String,
+    val verifyMsg: String,
+    val submitTime: String
+)
+
+data class VerifyResp(
+    val verifyInfo: VerifyInfo,
+    val admit: Boolean
+)
+
+data class VerifyList(
+    val code: Int = -1,
+    val success: Boolean = false,
+    val list: MutableList<VerifyInfo> = mutableListOf()
 )
 
 /**
@@ -38,7 +62,9 @@ data class ResInfo(
 data class GroupList(
     val list: MutableList<Group>
 )
+
 data class Group(
     val groupName: String,
     val groupId: String
 )
+

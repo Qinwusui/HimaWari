@@ -40,6 +40,7 @@ fun GroupScreen(mainViewModel: MainViewModel, navController: NavHostController) 
                         navController.navigate(NavScreen.ChatView.route)
                     }
             ) {
+
                 Text(
                     text = group.groupName,
                     fontSize = 20.sp,

@@ -13,6 +13,7 @@ data class MsgDataBase(
     @ColumnInfo(name = "msg") val msg: String,
     @ColumnInfo(name = "timeStamp") val time: String,
 )
+
 @Entity(tableName = "simpleMsg")
 data class SimpleMsg(
     @PrimaryKey(autoGenerate = true) val msgIndex: Int?,

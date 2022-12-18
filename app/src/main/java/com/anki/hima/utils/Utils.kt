@@ -21,5 +21,11 @@ fun <T> flowByIO(
     emit(content())
 }.distinctUntilChanged().flowOn(coroutineContext)
 
-fun String.encodeToContent(qq: String, pwd: String) =
-    "$this||$qq||$pwd".encodeBase64()
+fun String.encodeToSign(qq: String, pwd: String) = "$this||$qq||$pwd".encodeBase64()
+
+fun String.encodeToLog(pwd: String) = "$this||$pwd".encodeBase64()
+
+
+enum class TypeByUser {
+    UserName, QQ, Pwd
+}

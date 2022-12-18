@@ -1,19 +1,22 @@
 package com.anki.hima.utils
 
 import android.content.Context
-import androidx.annotation.Keep
 import androidx.core.content.edit
 import com.anki.hima.app.HimaApplication
 import com.anki.hima.utils.bean.GroupList
 import com.anki.hima.utils.bean.MsgData
+import com.anki.hima.utils.bean.ResFriendList
 import com.anki.hima.utils.bean.ResInfo
 import com.anki.hima.utils.bean.SignInfo
+import com.anki.hima.utils.bean.VerifyInfo
+import com.anki.hima.utils.bean.VerifyList
+import com.anki.hima.utils.bean.VerifyResp
 import com.anki.hima.utils.dao.MsgDataBase
 import com.anki.hima.utils.dao.SimpleMsg
 import com.google.gson.Gson
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.websocket.WebSockets
@@ -26,17 +29,15 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.gson.GsonWebsocketContentConverter
 import io.ktor.serialization.gson.gson
-import io.ktor.util.decodeBase64String
 import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.close
 import io.ktor.websocket.readBytes
 import io.ktor.websocket.serialization.sendSerializedBase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,15 +51,15 @@ object Repository {
      *         - 3.保存消息到数据库
      *         - 4.从消息数据库获取消息
      */
-    private const val BASE_URL = "http://:54322" //更换为自己的后端服务器IP
-    private val client = HttpClient(CIO) {
+    private const val BASE_URL = "http://192.168.1.32:54322" //更换为自己的后端服务器IP
+    private val client = HttpClient(OkHttp) {
         install(ContentNegotiation) {
-            gson {  }
+            gson { }
         }
         install(HttpCookies)
     }
     private val wsClient: HttpClient by lazy {
-        HttpClient(CIO) {
+        HttpClient(OkHttp) {
             install(WebSockets) {
                 contentConverter = GsonWebsocketContentConverter()
             }
@@ -73,18 +74,16 @@ object Repository {
      * 建立客户端与服务器连接
      */
     suspend fun initWsSession() {
-        try {
-            _wsSession = wsClient.webSocketSession(
-                host = "", //更换为自己的后端服务器IP
-                port = 54322,
-                method = HttpMethod.Get,
-                path = "/anki/chat"
-            )
-        } catch (e: Exception) {
-            e.message?.loge()
-            "没有连接到聊天服务器，5秒后重试...".toastShort()
-            withTimeout(5000) {
-                initWsSession()
+        if (_wsSession == null) {
+            _wsSession = try {
+                wsClient.webSocketSession(
+                    host = "192.168.1.32", //更换为自己的后端服务器IP
+                    port = 54322,
+                    method = HttpMethod.Get,
+                    path = "/anki/chat",
+                )
+            } catch (e: Exception) {
+                null
             }
         }
     }
@@ -155,12 +154,12 @@ object Repository {
      * 注册，需要用户名，QQ号，密码
      */
     fun signIn(userName: String, qq: String, pwd: String) = flowByIO {
-        val content = userName.encodeToContent(qq, pwd) //加密后的用户信息
+        val content = userName.encodeToSign(qq, pwd) //加密后的用户信息
         val req = client.post("$BASE_URL/user/sign") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(SignInfo(content = content))
+            setBody(SignInfo(content))
         }
         val b = req.body<ResInfo>()
         b.success
@@ -169,13 +168,13 @@ object Repository {
     /**
      * 登录逻辑，需要QQ号和密码
      */
-    fun login(userName: String, qq: String, pwd: String) = flowByIO {
-        val content = userName.encodeToContent(qq, pwd) //加密后的用户信息
+    fun login(qq: String, pwd: String) = flowByIO {
+        val content = qq.encodeToLog(pwd) //加密后的用户信息
         val req = client.post("$BASE_URL/user/login") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(SignInfo(content = content))
+            setBody(SignInfo(content))
         }
         val b = req.body<ResInfo>()
         if (b.success) {
@@ -184,16 +183,21 @@ object Repository {
         b.success
     }
 
+    private fun getLocalContent(): String {
+        val context = HimaApplication.context
+        //从SharedPref中读取加密的用户信息
+        val sp = context.getSharedPreferences("userInfo", Context.MODE_PRIVATE)
+        return sp.getString("info", "") ?: ""
+    }
+
     //自动登录
     fun autoLogin() = flowByIO {
-        val context = HimaApplication.context
-        val sp = context.getSharedPreferences("userInfo", Context.MODE_PRIVATE)
-        val content = sp.getString("info", "")!!
+        val content = getLocalContent()
         val req = client.post("$BASE_URL/user/login") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(SignInfo(content = content))
+            setBody(SignInfo(content))
         }
         try {
             val b = req.body<ResInfo>()
@@ -202,27 +206,32 @@ object Repository {
             }
             b.success
         } catch (e: Exception) {
-            e.message?.loge()
             false
         }
 
     }
 
-    /**
-     * 获取相关信息
-     */
-    fun getInfo(index: Int): String {
-        val context = HimaApplication.context
-        val sp = context.getSharedPreferences("userInfo", Context.MODE_PRIVATE)
-        val strList = sp.getString("info", "")!!
-        val str = strList.decodeBase64String().split("||")
-        if (str.size != 3) {
-            return "Guest"
-        }
-        if (index >= str.size) {
-            return "Guest"
-        }
-        return str[index]
+    //获取QQ
+    fun requestQQ() = flowByIO {
+        val content = getLocalContent()
+        val res = client.post("$BASE_URL/user/requestQQ") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(SignInfo(content))
+        }.body<ResInfo>()
+        res
+    }
+
+    //获取用户名
+    fun requestUname() = flowByIO {
+        val content = getLocalContent()
+        return@flowByIO client.post("$BASE_URL/user/uname") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(SignInfo(content))
+        }.body<ResInfo>()
     }
 
     /**
@@ -236,5 +245,83 @@ object Repository {
         }
         _wsSession?.close()
         _wsSession = null
+    }
+    //////////////////////////////////////////////////联系人/////////////////////////////////////
+    /**
+     * 首先是联系人查询功能
+     */
+    fun queryFriends(str: String) = flowByIO {
+        val list = client.post("$BASE_URL/user/queryFriends") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(str)
+        }
+        list.body<ResFriendList>()
+
+    }
+
+    //获取联系人查询列表
+    fun querySearchList(str: String) = flowByIO {
+        val resp = client.post("$BASE_URL/user/querySearchFriends") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(str)
+        }
+        resp.body<ResFriendList>()
+    }
+
+    //添加联系人功能
+    fun addFriend(ownerQQ: String, friendQQ: String, verifyMsg: String) = flowByIO {
+        //todo 需要检查verifyMsg中是否包含违禁词
+
+        val res = client.post("$BASE_URL/user/addVerifyMsg") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            val timeFormat = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date())
+            setBody(
+                VerifyInfo(
+                    from = ownerQQ,
+                    to = friendQQ,
+                    verifyMsg = verifyMsg,
+                    submitTime = timeFormat
+                )
+            )
+        }
+
+        val body = res.body<ResInfo>()
+
+        withContext(Dispatchers.Main) {
+            if (body.success) {
+                "发送成功，请等待对方回应~".toastShort()
+            } else {
+                "发送失败，之前是否发送过请求？".toastShort()
+            }
+        }
+        body
+    }
+
+    //回应验证请求()
+    fun respVerifyMsg(verifyInfo: VerifyInfo, admit: Boolean) = flowByIO {
+        val res = client.post("$BASE_URL/user/respVerifyMsg") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(VerifyResp(verifyInfo, admit))
+        }
+        res.body<ResInfo>()
+    }
+
+    //获取验证消息
+    fun queryVerifyMsg(qq: String) = flowByIO {
+        val res = client.post("$BASE_URL/user/queryVerifyMsg") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(qq)
+        }
+        res.body<VerifyList>()
     }
 }

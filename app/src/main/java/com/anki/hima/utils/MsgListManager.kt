@@ -26,7 +26,6 @@ object MsgListManager {
     }
 
 
-
     /**
      * 1.收到消息时，将消息插入到消息数据库
      */
@@ -50,12 +49,13 @@ object MsgListManager {
      * 2.获取简略消息列表
      */
     fun getSimpleMsgList() = flowByIO {
-        return@flowByIO simpleMsgListDao.getAll().distinctBy { it.chatRoomId }
+        simpleMsgListDao.getAll().distinctBy { it.chatRoomId }
     }
+
     /**
      * 3.获取某个聊天室的消息列表
      */
-    fun getMsgList(chatRoomId:String)= flowByIO {
-        return@flowByIO msgListDao.getChatRoomMsg(chatRoomId)
+    fun getMsgList(chatRoomId: String) = flowByIO {
+        msgListDao.getChatRoomMsg(chatRoomId)
     }
 }
