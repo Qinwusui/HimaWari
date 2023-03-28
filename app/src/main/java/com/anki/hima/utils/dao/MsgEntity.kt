@@ -7,17 +7,12 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "MsgList")
 data class MsgDataBase(
     @PrimaryKey(autoGenerate = true) val msgIndex: Int?,
-    @ColumnInfo(name = "nickName") val nickName: String,
-    @ColumnInfo(name = "qq") val qq: String,
-    @ColumnInfo(name = "chatRoomId") val chatRoomId: String,
+    @ColumnInfo(name = "nickName") val userName: String,
+    @ColumnInfo(name = "from") val from: Int,
+    @ColumnInfo(name = "chatRoomId") val groupId: Int?,
+    @ColumnInfo(name = "chatRoomName") val groupName:String?,
+    @ColumnInfo(name = "to") val to: Int?,
+    @ColumnInfo(name = "toNickName") val toUserName: String?,
     @ColumnInfo(name = "msg") val msg: String,
     @ColumnInfo(name = "timeStamp") val time: String,
-)
-
-@Entity(tableName = "simpleMsg")
-data class SimpleMsg(
-    @PrimaryKey(autoGenerate = true) val msgIndex: Int?,
-    @ColumnInfo(name = "nickName") val nickName: String,
-    @ColumnInfo(name = "msg") val time: String,
-    @ColumnInfo(name = "chatRoomId") val chatRoomId: String
 )

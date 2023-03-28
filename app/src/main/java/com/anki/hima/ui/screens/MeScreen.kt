@@ -31,11 +31,8 @@ fun MeScreen(mainViewModel: MainViewModel, navController: NavController) {
     val listState = rememberLazyListState()
     val login by mainViewModel.login.collectAsState()
     val nickname by mainViewModel.name.collectAsState()
-    val qq by mainViewModel.qq.collectAsState()
-    if (login) {
-        mainViewModel.getQQ()
-        mainViewModel.getNickName()
-    }
+    val userId by mainViewModel.userId.collectAsState()
+
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
         item {
             ListItem {
@@ -56,12 +53,12 @@ fun MeScreen(mainViewModel: MainViewModel, navController: NavController) {
                 ) {
                     if (login) {
                         AsyncImage(
-                            model = "http://q2.qlogo.cn/headimg_dl?dst_uin=$qq&spec=100",
+                            model = "http://q2.qlogo.cn/headimg_dl?dst_uin=$userId&spec=100",
                             contentDescription = null
                         )
                         Column {
                             Text(text = nickname)
-                            Text(text = qq)
+                            Text(text = "$userId")
                         }
                     } else {
                         TextButton(onClick = {

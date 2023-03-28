@@ -2,32 +2,26 @@ package com.anki.hima.utils
 
 import androidx.room.Room
 import com.anki.hima.app.HimaApplication
+import com.anki.hima.utils.bean.FriendData
 import com.anki.hima.utils.dao.MsgDataBase
 import com.anki.hima.utils.dao.MsgListDao
-import com.anki.hima.utils.dao.SimpleListDao
-import com.anki.hima.utils.dao.SimpleMsg
 
 /**
  * 消息列表，简略，非某一个聊天室
  */
 object MsgListManager {
     private var msgListDao: MsgListDao
-    private var simpleMsgListDao: SimpleListDao
 
     init {
         val db = Room.databaseBuilder(
             HimaApplication.context, MsgManager::class.java, "MsgList"
         ).build()
-        val simpleMsgDb = Room.databaseBuilder(
-            HimaApplication.context, SimpleMsgManager::class.java, "simpleMsgList"
-        ).build()
         msgListDao = db.msgListDao()
-        simpleMsgListDao = simpleMsgDb.simpleListDao()
     }
 
 
     /**
-     * 1.收到消息时，将消息插入到消息数据库
+     * 收到消息时，将消息插入到消息数据库
      */
     fun insertMsgToDb(msgDataBase: MsgDataBase) = flowByIO {
         try {
@@ -37,25 +31,25 @@ object MsgListManager {
         }
     }
 
-    fun insertSimpleMsgToDb(simpleMsg: SimpleMsg) = flowByIO {
-        try {
-            simpleMsgListDao.insertSimpleMsg(simpleMsg)
-        } catch (e: Exception) {
-            e.message?.loge()
-        }
-    }
 
     /**
-     * 2.获取简略消息列表
+     * 获取群聊的消息
      */
-    fun getSimpleMsgList() = flowByIO {
-        simpleMsgListDao.getAll().distinctBy { it.chatRoomId }
-    }
-
-    /**
-     * 3.获取某个聊天室的消息列表
-     */
-    fun getMsgList(chatRoomId: String) = flowByIO {
+    fun getChatRoomMsgList(chatRoomId: Int) = flowByIO {
         msgListDao.getChatRoomMsg(chatRoomId)
+    }
+
+    /**
+     * 获取某个好友发送的消息
+     */
+    fun getFriendMsgList(to: FriendData) = flowByIO {
+        msgListDao.getFriendsMsg(to.friendId)
+    }
+
+    /**
+     * 获取消息列表
+     */
+    fun getAllMsg() = flowByIO {
+        msgListDao.getAllMsg()
     }
 }

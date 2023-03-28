@@ -3,44 +3,31 @@ package com.anki.hima.utils
 import android.content.Context
 import androidx.core.content.edit
 import com.anki.hima.app.HimaApplication
-import com.anki.hima.utils.bean.GroupList
-import com.anki.hima.utils.bean.MsgData
-import com.anki.hima.utils.bean.ResFriendList
-import com.anki.hima.utils.bean.ResInfo
-import com.anki.hima.utils.bean.SignInfo
-import com.anki.hima.utils.bean.VerifyInfo
-import com.anki.hima.utils.bean.VerifyList
-import com.anki.hima.utils.bean.VerifyResp
+import com.anki.hima.utils.bean.*
 import com.anki.hima.utils.dao.MsgDataBase
-import com.anki.hima.utils.dao.SimpleMsg
-import com.google.gson.Gson
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.cookies.HttpCookies
-import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.webSocketSession
-import io.ktor.client.request.get
-import io.ktor.client.request.headers
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.serialization.gson.GsonWebsocketContentConverter
-import io.ktor.serialization.gson.gson
-import io.ktor.websocket.WebSocketSession
-import io.ktor.websocket.close
-import io.ktor.websocket.readBytes
-import io.ktor.websocket.serialization.sendSerializedBase
-import kotlinx.coroutines.Dispatchers
+import com.google.gson.GsonBuilder
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
+import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.gson.*
+import io.ktor.serialization.kotlinx.*
+import io.ktor.util.*
+import io.ktor.websocket.*
+import io.ktor.websocket.serialization.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 object Repository {
     /**
@@ -51,7 +38,7 @@ object Repository {
      *         - 3.保存消息到数据库
      *         - 4.从消息数据库获取消息
      */
-    private const val BASE_URL = "http://192.168.1.32:54322" //更换为自己的后端服务器IP
+    private const val BASE_URL = "http://172.16.15.123:54443" //更换为自己的后端服务器IP
     private val client = HttpClient(OkHttp) {
         install(ContentNegotiation) {
             gson { }
@@ -63,25 +50,30 @@ object Repository {
             install(WebSockets) {
                 contentConverter = GsonWebsocketContentConverter()
             }
+            install(Auth) {
+                basic { }
+            }
         }
     }
+    private val json = GsonBuilder().create()
 
-
-    private var _wsSession: WebSocketSession? = null
+    private var wsSession: WebSocketSession? = null
 
 
     /**
      * 建立客户端与服务器连接
      */
     suspend fun initWsSession() {
-        if (_wsSession == null) {
-            _wsSession = try {
+        if (wsSession == null) {
+            wsSession = try {
                 wsClient.webSocketSession(
-                    host = "192.168.1.32", //更换为自己的后端服务器IP
-                    port = 54322,
+                    host = "172.16.15.123", //更换为自己的后端服务器IP
+                    port = 54443,
                     method = HttpMethod.Get,
                     path = "/anki/chat",
-                )
+                ) {
+                    basicAuth("wusui", "Qinsansui233...")
+                }
             } catch (e: Exception) {
                 null
             }
@@ -89,19 +81,26 @@ object Repository {
     }
 
 
-    fun getGroupList() = flowByIO {
-        val body = client.get("$BASE_URL/anki/groupList")
-        body.body<GroupList>()
+    fun getGroupList(userId: Int) = flowByIO {
+        val body = client.post("$BASE_URL/group/list") {
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                User(
+                    id = userId,
+                    pwd = null,
+                    userName = null
+                )
+            )
+        }
+        body.body<ResInfo<List<Group>>>()
     }
 
     /**
-     * 发送消息
+     * 发送群聊消息
      */
-    suspend fun sendMsg(nickName: String, chatRoomId: String, qq: String, msg: String) {
-        _wsSession?.sendSerializedBase(
-            MsgData(nickName, msg, chatRoomId, qq),
-            GsonWebsocketContentConverter(),
-            Charsets.UTF_8
+    suspend fun sendMsg(msgData: MsgData) {
+        wsSession?.sendSerializedBase(
+            msgData, KotlinxWebsocketSerializationConverter(Json), Charsets.UTF_8
         )
     }
 
@@ -110,33 +109,42 @@ object Repository {
      * 该方法应该一直保持运行
      */
     suspend fun receive() = channelFlow {
-        val gson = Gson()
+
         val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
         val time = simpleDateFormat.format(Date())
-        _wsSession?.incoming?.consumeEach {//收到消息，消息内容包括：昵称、消息、所在聊天室、QQ
-            val msgData = gson.fromJson(it.readBytes().decodeToString(), MsgData::class.java)
-            //插入到数据库
-            val msgDataBase =
+        wsSession?.incoming?.consumeEach {//收到消息，消息内容包括：昵称、消息、所在聊天室、QQ
+            val msgData = Json.decodeFromString<MsgData>(it.readBytes().decodeToString())
+            val msgDataBase = if (msgData.groupId == null) {
                 MsgDataBase(
                     null,
                     msgData.nickName,
                     msgData.qq,
-                    msgData.chatRoomId,
+                    null,
+                    null,
+                    msgData.to,
+                    msgData.toNickName,
                     msgData.msg,
                     time
                 )
-            MsgListManager.insertMsgToDb(msgDataBase).collect()
-            val simpleMsg =
-                SimpleMsg(
+            } else {
+                MsgDataBase(
                     null,
                     msgData.nickName,
-                    time,
-                    msgData.chatRoomId
+                    msgData.qq,
+                    msgData.groupId,
+                    msgData.groupName,
+                    null,
+                    null,
+                    msgData.msg,
+                    time
                 )
-            MsgListManager.insertSimpleMsgToDb(simpleMsg).collect()
+            }
+            //插入到数据库
+            MsgListManager.insertMsgToDb(msgDataBase).collect()
             //将消息发送到UI
             send(msgDataBase)
         }
+
     }
 
     private fun saveUser(content: String) {
@@ -151,36 +159,50 @@ object Repository {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     /////////用户注册登录相关////////////////////////////////////////////////////////////////////////////
     /**
-     * 注册，需要用户名，QQ号，密码
+     * @need 注册，需要用户名，密码
+     * @return [ResInfo]
      */
-    fun signIn(userName: String, qq: String, pwd: String) = flowByIO {
-        val content = userName.encodeToSign(qq, pwd) //加密后的用户信息
-        val req = client.post("$BASE_URL/user/sign") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            setBody(SignInfo(content))
+    fun signIn(userName: String, pwd: String) = flowByIO {
+        val encPwd = pwd.encodeBase64()
+        val req = client.post("$BASE_URL/user/add") {
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                User(
+                    id = null,
+                    userName = userName,
+                    pwd = encPwd
+                )
+            )
         }
-        val b = req.body<ResInfo>()
-        b.success
+        val b = req.body<ResInfo<Int>>()
+        b
     }
 
     /**
      * 登录逻辑，需要QQ号和密码
      */
-    fun login(qq: String, pwd: String) = flowByIO {
-        val content = qq.encodeToLog(pwd) //加密后的用户信息
+    fun login(id: Int, pwd: String) = flowByIO {
+        val encPwd = pwd.encodeBase64()
+        val user = User(
+            userName = null,
+            id = id,
+            pwd = encPwd
+        )
         val req = client.post("$BASE_URL/user/login") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(SignInfo(content))
+            setBody(
+                user
+            )
         }
-        val b = req.body<ResInfo>()
-        if (b.success) {
+        val b = req.body<ResInfo<Any?>>()
+        b.toString().loge()
+        if (b.code == 0) {
+            val content = json.toJson(user).encodeBase64()
             saveUser(content)
         }
-        b.success
+        b
     }
 
     private fun getLocalContent(): String {
@@ -192,47 +214,31 @@ object Repository {
 
     //自动登录
     fun autoLogin() = flowByIO {
-        val content = getLocalContent()
+        val content = getLocalContent().decodeBase64String()
+        content.loge()
+        if (content == "") return@flowByIO false
+        val user = json.fromJson(content, User::class.java)
         val req = client.post("$BASE_URL/user/login") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(SignInfo(content))
+            setBody(
+                user
+            )
         }
         try {
-            val b = req.body<ResInfo>()
-            if (b.success) {
-                saveUser(content)
+            val b = req.body<ResInfo<Any?>>()
+            b.toString().loge()
+            if (b.code == 0) {
+                saveUser(content.encodeBase64())
             }
-            b.success
+            b.code == 0
         } catch (e: Exception) {
             false
         }
 
     }
 
-    //获取QQ
-    fun requestQQ() = flowByIO {
-        val content = getLocalContent()
-        val res = client.post("$BASE_URL/user/requestQQ") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            setBody(SignInfo(content))
-        }.body<ResInfo>()
-        res
-    }
-
-    //获取用户名
-    fun requestUname() = flowByIO {
-        val content = getLocalContent()
-        return@flowByIO client.post("$BASE_URL/user/uname") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            setBody(SignInfo(content))
-        }.body<ResInfo>()
-    }
 
     /**
      * 登出
@@ -243,85 +249,146 @@ object Repository {
         sp.edit(true) {
             remove("info")
         }
-        _wsSession?.close()
-        _wsSession = null
+        wsSession?.close()
+        wsSession = null
     }
     //////////////////////////////////////////////////联系人/////////////////////////////////////
     /**
-     * 首先是联系人查询功能
+     * 获取好友列表
      */
-    fun queryFriends(str: String) = flowByIO {
-        val list = client.post("$BASE_URL/user/queryFriends") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            setBody(str)
+    fun queryFriendList(userId: Int) = flowByIO {
+        val list = client.post("$BASE_URL/friends/list") {
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                User(
+                    id = userId,
+                    userName = null,
+                    pwd = null
+                )
+            )
         }
-        list.body<ResFriendList>()
+        list.body<ResInfo<List<FriendData>>>()
 
     }
 
-    //获取联系人查询列表
-    fun querySearchList(str: String) = flowByIO {
-        val resp = client.post("$BASE_URL/user/querySearchFriends") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            setBody(str)
+    //好友模糊查找
+    fun searchFriend(friendId: Int) = flowByIO {
+        val res = client.post("$BASE_URL/friends/search") {
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                FriendData(
+                    friendId = friendId,
+                    friendName = null,
+                )
+            )
         }
-        resp.body<ResFriendList>()
+        val b = res.body<ResInfo<List<User>>>()
+        b.toString().loge()
+        b
     }
 
     //添加联系人功能
-    fun addFriend(ownerQQ: String, friendQQ: String, verifyMsg: String) = flowByIO {
+    fun sendApply(userId: Int, to: Int, msg: String) = flowByIO {
         //todo 需要检查verifyMsg中是否包含违禁词
 
-        val res = client.post("$BASE_URL/user/addVerifyMsg") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
-            val timeFormat = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date())
+        val res = client.post("$BASE_URL/friends/add") {
+            header(HttpHeaders.ContentType, "application/json")
             setBody(
-                VerifyInfo(
-                    from = ownerQQ,
-                    to = friendQQ,
-                    verifyMsg = verifyMsg,
-                    submitTime = timeFormat
+                FriendApply(
+                    from = userId,
+                    to = to,
+                    msg = msg,
+                    createdTime = null
                 )
             )
         }
 
-        val body = res.body<ResInfo>()
+        val body = res.body<ResInfo<Any?>>()
 
-        withContext(Dispatchers.Main) {
-            if (body.success) {
-                "发送成功，请等待对方回应~".toastShort()
-            } else {
-                "发送失败，之前是否发送过请求？".toastShort()
-            }
-        }
         body
     }
 
     //回应验证请求()
-    fun respVerifyMsg(verifyInfo: VerifyInfo, admit: Boolean) = flowByIO {
-        val res = client.post("$BASE_URL/user/respVerifyMsg") {
+    fun opApply(userId: Int, friendId: Int, op: Int) = flowByIO {
+        val res = client.post("$BASE_URL/friends/op") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(VerifyResp(verifyInfo, admit))
+            setBody(
+                ApplyOp(
+                    from = userId,
+                    to = friendId,
+                    op = op
+                )
+            )
         }
-        res.body<ResInfo>()
+        res.body<ResInfo<Any?>>()
     }
 
     //获取验证消息
-    fun queryVerifyMsg(qq: String) = flowByIO {
-        val res = client.post("$BASE_URL/user/queryVerifyMsg") {
+    fun queryApplyList(userId: Int) = flowByIO {
+        val res = client.post("$BASE_URL/friends/list") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
-            setBody(qq)
+            setBody(
+                User(
+                    userName = null,
+                    id = userId,
+                    pwd = null
+                )
+            )
         }
-        res.body<VerifyList>()
+        res.body<ResInfo<List<FriendApply>>>()
+    }
+
+    //新建群组
+    fun addGroup(groupName: String, userId: Int) = flowByIO {
+
+        val res = client.post("$BASE_URL/group/add") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+            }
+            setBody(
+                GroupAddData(
+                    groupName = groupName,
+                    user = User(
+                        id = userId,
+                        pwd = null,
+                        userName = null
+                    )
+                )
+            )
+        }
+        res.body<ResInfo<Any?>>()
+    }
+
+    //删除群组
+//    fun delGroup(groupId: Int, ownerQQ: String) = flowByIO {
+//        val res = client.post("$BASE_URL/anki/group/delete") {
+//            headers {
+//                append(HttpHeaders.ContentType, "application/json")
+//            }
+//            setBody(
+//                GroupDeleteData(
+//                    groupId, ownerQQ, "Qinsansui233...".encodeBase64()
+//                )
+//            )
+//        }
+//        res.body<ResInfo<>>()
+//    }
+
+    fun joinGroup(groupId: Int, userId: Int, subscription: String) = flowByIO {
+        val res = client.post("$BASE_URL/group/join") {
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                JoinGroupData(
+                    userId = userId,
+                    groupId = groupId,
+                    sub = subscription
+                )
+            )
+        }
+        res.body<ResInfo<Any?>>()
     }
 }

@@ -42,6 +42,8 @@ import androidx.navigation.NavController
 import com.anki.hima.ui.theme.deep_gray
 import com.anki.hima.ui.theme.gray
 import com.anki.hima.utils.TypeByUser
+import com.anki.hima.utils.loge
+import com.anki.hima.utils.toastShort
 import com.anki.hima.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.flow
 
@@ -54,15 +56,20 @@ fun UserScreen(mainViewModel: MainViewModel, navController: NavController) {
     var pwd by remember {
         mutableStateOf("")
     }
-    var qq by remember {
+    var userId by remember {
         mutableStateOf("")
     }
     var isLogin by remember {
         mutableStateOf(false)
     }
-    val qqRegex = "[1-9][0-9]{7,14}".toRegex()
-    val pwdRegex = "\\w{6,10}".toRegex()
-    var qqEnabled by remember {
+
+    val idRegex = "\\d{1,14}".toRegex()
+    val pwdRegex = "[\\w\\d.@]{6,14}".toRegex()
+    val userNameRegex = "\\w{6,14}".toRegex()
+    var idEnabled by remember {
+        mutableStateOf(false)
+    }
+    var userNameEnabled by remember {
         mutableStateOf(false)
     }
     var pwdEnabled by remember {
@@ -71,8 +78,11 @@ fun UserScreen(mainViewModel: MainViewModel, navController: NavController) {
     if (pwd.isNotEmpty()) {
         pwdEnabled = pwdRegex.matches(pwd)
     }
-    if (qq.isNotEmpty()) {
-        qqEnabled = qqRegex.matches(qq)
+    if (userId.isNotEmpty()) {
+        idEnabled = idRegex.matches(userId)
+    }
+    if (userName.isNotEmpty()) {
+        userNameEnabled = userNameRegex.matches(userName)
     }
     val login by mainViewModel.login.collectAsState()
     val signIn by mainViewModel.sign.collectAsState()
@@ -118,9 +128,7 @@ fun UserScreen(mainViewModel: MainViewModel, navController: NavController) {
                         )
                         IconButton(onClick = {
                             isLogin = !isLogin
-                            if (login) {
-                                isLogin = true
-                            }
+
                         }) {
                             Icon(
                                 imageVector = Icons.TwoTone.KeyboardArrowRight,
@@ -143,25 +151,34 @@ fun UserScreen(mainViewModel: MainViewModel, navController: NavController) {
         ) {
 
             if (login) {
-                mainViewModel.getQQ()
-                mainViewModel.getNickName()
+                //TODO 登录
                 Text("欢迎你，$requestName")
             } else {
-                qq = transTextField(typeByUser = TypeByUser.QQ, qqEnabled)
+
                 if (!isLogin) {
                     userName = transTextField(typeByUser = TypeByUser.UserName, userName.length > 4)
+
+                } else {
+                    userId = transTextField(typeByUser = TypeByUser.UserId, idEnabled, userId)
                 }
                 pwd = transTextField(typeByUser = TypeByUser.Pwd, pwdEnabled)
                 Spacer(modifier = Modifier.height(10.dp))
                 TextButton(modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         if (!isLogin) {
-                            if (qqEnabled && pwdEnabled) {
-                                mainViewModel.signIn(userName, qq, pwd)
+
+                            if (userNameEnabled && pwdEnabled) {
+                                mainViewModel.signIn(userName, pwd)
                             }
+
                         } else {
-                            if (qqEnabled && pwdEnabled) {
-                                mainViewModel.login(qq, pwd)
+                            if (idEnabled && pwdEnabled) {
+                                val id = userId.toIntOrNull()
+                                if (id == null) {
+                                    "请输入正确的ID".toastShort()
+                                } else {
+                                    mainViewModel.login(id, pwd)
+                                }
                             }
                         }
                     }) {
@@ -179,7 +196,8 @@ fun UserScreen(mainViewModel: MainViewModel, navController: NavController) {
 @Composable
 fun transTextField(
     typeByUser: TypeByUser,
-    enabled: Boolean
+    enabled: Boolean,
+    userId: String = "",
 ): String {
     var text by rememberSaveable {
         mutableStateOf("")
@@ -190,18 +208,18 @@ fun transTextField(
             if (text.isEmpty()) {
                 when (typeByUser) {
                     TypeByUser.UserName -> "用户名"
-                    TypeByUser.QQ -> "QQ"
+                    TypeByUser.UserId -> "用户ID"
                     TypeByUser.Pwd -> "密码"
                 }
             } else {
                 when {
                     typeByUser == TypeByUser.UserName && enabled -> "用户名"
                     typeByUser == TypeByUser.Pwd && enabled -> "密码"
-                    typeByUser == TypeByUser.QQ && enabled -> "QQ"
+                    typeByUser == TypeByUser.UserId && enabled -> "用户ID"
                     !enabled -> when (typeByUser) {
-                        TypeByUser.UserName -> "用户名为4位以上字符"
-                        TypeByUser.QQ -> "QQ为8-12位数字"
-                        TypeByUser.Pwd -> "密码需包含6-10位数字字符大小写下划线"
+                        TypeByUser.UserName -> "用户名为6位以上字符"
+                        TypeByUser.UserId -> "ID为1-14位数字"
+                        TypeByUser.Pwd -> "密码需包含6-14位数字字符"
                     }
 
                     else -> ""
@@ -212,7 +230,7 @@ fun transTextField(
     }
     val labelText = labelFlow.collectAsState(initial = "")
     TextField(
-        value = text,
+        value = if (userId != "") userId else text,
         onValueChange = { text = it },
         label = {
             Text(
@@ -221,12 +239,11 @@ fun transTextField(
         },
         isError = !enabled && text.isNotEmpty(),
         visualTransformation = when (typeByUser) {
-            TypeByUser.UserName, TypeByUser.QQ -> VisualTransformation.None
+            TypeByUser.UserName, TypeByUser.UserId -> VisualTransformation.None
             TypeByUser.Pwd -> PasswordVisualTransformation()
-
         },
         keyboardOptions = when (typeByUser) {
-            TypeByUser.UserName, TypeByUser.QQ -> {
+            TypeByUser.UserName, TypeByUser.UserId -> {
                 KeyboardOptions.Default
             }
 
@@ -240,10 +257,10 @@ fun transTextField(
         },
         singleLine = true,
         colors = TextFieldDefaults.textFieldColors(
-            textColor = deep_gray,
+            focusedTextColor = deep_gray,
             containerColor = Color.Transparent,
             cursorColor = gray,
-            placeholderColor = Color.Transparent,
+            focusedPlaceholderColor = Color.Transparent,
         ),
         trailingIcon = {
             IconButton(onClick = { text = "" }) {

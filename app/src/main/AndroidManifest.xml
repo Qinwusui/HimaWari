@@ -32,9 +32,6 @@
             </intent-filter>
 
         </activity>
-        <activity
-            android:name=".ui.activity.ChatActivity"
-            android:exported="false" />
     </application>
 
 </manifest>

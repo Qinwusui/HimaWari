@@ -1,7 +1,9 @@
 package com.anki.hima.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,12 +35,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.anki.hima.ui.theme.deep_gray
-import com.anki.hima.utils.bean.FriendItem
-import com.anki.hima.utils.bean.VerifyInfo
+import com.anki.hima.utils.bean.FriendApply
+import com.anki.hima.utils.bean.FriendData
+import com.anki.hima.utils.loge
 import com.anki.hima.utils.toastShort
 import com.anki.hima.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController) {
     val listState = rememberLazyListState()
@@ -46,8 +49,8 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
     rememberUpdatedState(newValue = friendList).value
     val verifyList by mainViewModel.verifyList.collectAsState()
     rememberUpdatedState(newValue = verifyList).value
-    val _qq by mainViewModel.qq.collectAsState()
-    val qq by rememberUpdatedState(newValue = _qq)
+    val userId by mainViewModel.userId.collectAsState()
+    val id by rememberUpdatedState(newValue = userId)
     val respVerifyResp by mainViewModel.respVerifyResp.collectAsState()
     rememberUpdatedState(newValue = respVerifyResp).value
     val login by mainViewModel.login.collectAsState()
@@ -55,29 +58,29 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
 
 
     if (login) {
-        mainViewModel.queryFriendList(qq)
-        mainViewModel.queryVerifyList(qq)
+        mainViewModel.queryFriendList()
+        mainViewModel.queryApplyList(id)
     }
     var showDialog by remember {
 
         mutableStateOf(false)
     }
-    var verifyInfo by remember {
-        mutableStateOf(VerifyInfo("", "", "", ""))
+    var friendApply by remember {
+        mutableStateOf(FriendApply(0, 0, "", null))
     }
     AnimatedVisibility(visible = showDialog) {
         AlertDialog(onDismissRequest = { showDialog = false }, title = {
             Text(text = "验证信息")
         }, confirmButton = {
             TextButton(onClick = {
-                mainViewModel.respVerifyMsg(verifyInfo = verifyInfo, admit = true)
+                mainViewModel.opApply(friendId = friendApply.from, 1)
                 showDialog = false
             }) {
                 Text(text = "同意")
             }
         }, dismissButton = {
             TextButton(onClick = {
-                mainViewModel.respVerifyMsg(verifyInfo = verifyInfo, admit = false)
+                mainViewModel.opApply(friendId = friendApply.from, 2)
                 showDialog = false
             }) {
                 Text(text = "拒绝")
@@ -108,12 +111,12 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
             }
 
             //验证消息列表
-            itemsIndexed(verifyList.list) { _: Int, item: VerifyInfo ->
+            itemsIndexed(verifyList.info ?: mutableListOf()) { _: Int, item: FriendApply ->
                 Row(modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
                     .clickable {
-                        verifyInfo = item
+                        friendApply = item
                         showDialog = true
                     }
                     .padding(horizontal = 10.dp),
@@ -133,12 +136,12 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.Start
                         ) {
-                            Text(text = item.from)
-                            Text(text = "验证消息：${item.verifyMsg}")
+                            Text(text = "${item.from}")
+                            Text(text = "验证消息：${item.msg}")
                         }
                     }
                     Text(
-                        text = item.submitTime,
+                        text = "${item.createdTime}",
                         fontSize = 10.sp,
                         style = TextStyle.Default.copy(
                             color = deep_gray.copy(alpha = 0.7f)
@@ -175,7 +178,7 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
                 }
             }
             //好友列表
-            if (friendList.list.isEmpty()) {
+            if ((friendList.info ?: mutableListOf()).isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier
@@ -188,30 +191,40 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
                     }
                 }
             } else {
-                itemsIndexed(friendList.list) { _: Int, item: FriendItem ->
+                itemsIndexed(friendList.info ?: mutableListOf()) { _: Int, item: FriendData ->
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(1f),
+                        modifier = Modifier
+                            .fillMaxWidth(1f)
+                            .combinedClickable(
+                                onClick = {
+                                    //点击进入聊天页面
+                                    mainViewModel.changeFriendId(item)
+                                    item
+                                        .toString()
+                                        .loge()
+                                    navController.navigate(NavScreen.ChatView.route)
+                                },
+                                onLongClick = {
+                                    //TODO 删除好友对话框
+                                }
+                            ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         AsyncImage(
-                            model = "https://q2.qlogo.cn/headimg_dl?dst_uin=${item.qq}&spec=100",
+                            model = "https://q2.qlogo.cn/headimg_dl?dst_uin=${item.friendId}&spec=100",
                             contentDescription = null
                         )
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    //TODO 好友聊天
-
-                                }
                                 .height(60.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.Start
                         ) {
-                            Text(text = item.uName)
-                            Text(text = item.qq)
+                            Text(text = "${item.friendName}")
+                            Text(text = "${item.friendId}")
 
                         }
                     }

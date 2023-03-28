@@ -6,28 +6,24 @@ import androidx.room.Query
 
 @Dao
 interface MsgListDao {
-    //    @Query("select * from MsgList")
-//    fun getAll(): List<MsgDataBase>
+
     @Insert
     fun insertMsg(msgDataBase: MsgDataBase)
 
-    //    @Delete
-//    fun deleteMsg(msgDataBase: MsgDataBase)
-//    @Update
-//    fun updateMsg(msgDataBase: MsgDataBase)
-    @Query("select * from MsgList where chatRoomId=:chatRoomId")
-    fun getChatRoomMsg(chatRoomId: String): List<MsgDataBase>
-}
 
-@Dao
-interface SimpleListDao {
-    @Query("select * from simpleMsg")
-    fun getAll(): List<SimpleMsg>
+    @Query("select * from MsgList where chatRoomId=:groupId")
+    fun getChatRoomMsg(groupId: Int): List<MsgDataBase>
 
-    @Insert
-    fun insertSimpleMsg(msg: SimpleMsg)
-//    @Delete
-//    fun deleteSimpleMsg(msg: SimpleMsg)
-//    @Update
-//    fun updateSimpleMsg(msg: SimpleMsg)
+    @Query("select * from MsgList where `to`=:to")
+    fun getFriendsMsg(to: Int): List<MsgDataBase>
+
+    @Query(
+        """
+        select msgIndex,nickName,`from`,chatRoomId,chatRoomName,`to`,toNickName,msg,timeStamp from
+(select *,count(distinct chatRoomId) from MsgList group by chatRoomId)
+ order by msgIndex desc
+    """
+    )
+    fun getAllMsg(): List<MsgDataBase>
+
 }

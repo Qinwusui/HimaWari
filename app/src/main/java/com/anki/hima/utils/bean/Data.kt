@@ -1,70 +1,85 @@
 package com.anki.hima.utils.bean
 
+import kotlinx.serialization.Serializable
+
 
 /**
  * 发送给服务器的数据对象
  */
 
+@Serializable
 data class MsgData(
-    val nickName: String,
+    val nickName: String,//昵称
+    val msg: String, //消息
+    val qq: Int,
+    val groupId: Int?, //聊天室id
+    val groupName: String?,
+    val to: Int?,
+    val toNickName: String?
+)
+
+
+@Serializable
+data class User(
+    val id: Int?,
+    val userName: String?,
+    val pwd: String?
+)
+
+
+@Serializable
+data class FriendApply(
+    val from: Int,
+    val to: Int,
     val msg: String,
-    val chatRoomId: String,
-    val qq: String
+    val createdTime: String?
+)
+
+@Serializable
+data class ApplyOp(
+    val from: Int,
+    val to: Int,
+    val op: Int,
 )
 
 
-data class SignInfo(
-    val content: String = ""
-)
-
-data class FriendItem(
-    val qq: String,
-    val uName: String
-)
-
-data class ResFriendList(
+@Serializable
+data class ResInfo<T>(
     val code: Int = -1,
-    val success: Boolean = false,
-    val list: MutableList<FriendItem> = mutableListOf()
+    val info: T? = null,
+    val msg: String? = ""
 )
 
-data class VerifyInfo(
-    val from: String,
-    val to: String,
-    val verifyMsg: String,
-    val submitTime: String
-)
-
-data class VerifyResp(
-    val verifyInfo: VerifyInfo,
-    val admit: Boolean
-)
-
-data class VerifyList(
-    val code: Int = -1,
-    val success: Boolean = false,
-    val list: MutableList<VerifyInfo> = mutableListOf()
-)
-
-/**
- *  返回
- *
- *      0：注册/登录成功
- *      1：注册/登录失败
- */
-
-data class ResInfo(
-    val code: Int = -1,
-    val success: Boolean = false,
-    val msg: String = ""
-)
-
-data class GroupList(
-    val list: MutableList<Group>
-)
-
+@Serializable
 data class Group(
     val groupName: String,
-    val groupId: String
+    val id: Int,
+    val ownerId: Int,
+    val createdTime: String,
 )
 
+@Serializable
+data class GroupAddData(
+    val groupName: String,
+    val user: User
+)
+
+@Serializable
+data class GroupDeleteData(
+    val groupId: Int,
+    val ownerQQ: String,
+    val token: String
+)
+
+@Serializable
+data class JoinGroupData(
+    val userId: Int,
+    val groupId: Int,
+    val sub: String,
+)
+
+@Serializable
+data class FriendData(
+    val friendId: Int,
+    val friendName: String?,
+)

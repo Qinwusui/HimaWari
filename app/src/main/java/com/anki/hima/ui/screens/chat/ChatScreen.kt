@@ -38,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +57,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -87,15 +87,14 @@ fun ChatScreen(
     mainViewModel: MainViewModel,
     navController: NavHostController,
 ) {
-    mainViewModel.loadMsgList()
-    val context = LocalContext.current
+    mainViewModel.loadChatRoomList()
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequest = FocusRequester()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val systemUiController = rememberSystemUiController()
     val nickname by mainViewModel.name.collectAsState()
-    val qq by mainViewModel.qq.collectAsState()
+    val qq by mainViewModel.userId.collectAsState()
     val chatRoomMsgList by mainViewModel.chatRoomMsgList.collectAsState()
     val msg by mainViewModel.msgData.collectAsState()
     rememberUpdatedState(newValue = msg).value
@@ -106,9 +105,13 @@ fun ChatScreen(
         mutableStateOf(false)
     }
 
-    scope.launch {
-        listState.animateScrollToItem(chatRoomMsgData.size)
-    }
+    DisposableEffect(key1 = chatRoomMsgData, effect = {
+        onDispose {
+            scope.launch {
+                listState.animateScrollToItem(chatRoomMsgData.size)
+            }
+        }
+    })
     SideEffect {
         systemUiController.setSystemBarsColor(gray, false)
     }
@@ -160,7 +163,9 @@ fun ChatScreen(
                                                 "说点什么吧...".toastShort()
                                                 return@KeyboardActions
                                             }
-                                            mainViewModel.sendMsg(msg = input)
+
+                                            mainViewModel.sendMsg(input)
+
                                             input = ""
                                         } else {
                                             "你还没有登录呢...".toastShort()
@@ -230,7 +235,7 @@ fun ChatScreen(
                                                         "说点什么吧...".toastShort()
                                                         return@IconButton
                                                     }
-                                                    mainViewModel.sendMsg(msg = input)
+                                                    mainViewModel.sendMsg(input)
                                                     input = ""
                                                 } else {
                                                     "你还没有登录呢...".toastShort()
@@ -280,7 +285,13 @@ fun ChatScreen(
         scaffoldState = scaffoldState,
         topBar = {
             CenterAlignedTopAppBar(title = {
-                Text(mainViewModel.chatRoomId, color = Color.White)
+                Text(
+                    text = if (mainViewModel.group.id == 0) {
+                        mainViewModel.friends.friendName ?: ""
+                    } else {
+                        mainViewModel.group.groupName
+                    }, color = Color.White
+                )
             }, navigationIcon = {
                 IconButton(onClick = {
                     navController.popBackStack()
@@ -305,8 +316,6 @@ fun ChatScreen(
             )
         },
     ) {
-        mainViewModel.getNickName()
-        mainViewModel.getQQ()
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -315,7 +324,7 @@ fun ChatScreen(
         ) {
             itemsIndexed(chatRoomMsgData) { _, x ->
 
-                val ori = x.nickName != nickname
+                val ori = x.userName != nickname
                 val shape = if (ori) {
                     RoundedCornerShape(
                         10.dp, 10.dp, 10.dp, 3.dp
@@ -362,7 +371,7 @@ fun ChatScreen(
                         if (ori) {
                             Card(shape = RoundedCornerShape(50.dp)) {
                                 AsyncImage(
-                                    model = "https://q2.qlogo.cn/headimg_dl?dst_uin=${x.qq}&spec=100",
+                                    model = "https://q2.qlogo.cn/headimg_dl?dst_uin=${x.from}&spec=100",
                                     contentDescription = null
                                 )
                             }
@@ -374,7 +383,7 @@ fun ChatScreen(
                             //昵称展示
                             Text(
 
-                                text = x.nickName,
+                                text = x.userName,
                                 color = Color.Black.copy(alpha = 0.6f),
                                 textAlign = if (ori) TextAlign.Start else TextAlign.End
                             )
@@ -419,6 +428,7 @@ fun ChatScreen(
         }
     }
     BackHandler {
+        mainViewModel.resetData()
         if (scaffoldState.bottomSheetState.isExpanded) {
             focusRequest.freeFocus()
             keyboardController?.hide()

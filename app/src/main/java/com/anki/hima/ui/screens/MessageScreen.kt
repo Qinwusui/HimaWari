@@ -4,33 +4,13 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +21,8 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.anki.hima.R
 import com.anki.hima.ui.theme.gray
-import com.anki.hima.utils.dao.SimpleMsg
+import com.anki.hima.utils.bean.FriendData
+import com.anki.hima.utils.dao.MsgDataBase
 import com.anki.hima.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -52,19 +33,23 @@ import kotlinx.coroutines.launch
 fun MessageScreen(mainViewModel: MainViewModel, navController: NavHostController) {
     val scp = rememberCoroutineScope()
     val msg by mainViewModel.msgData.collectAsState()
-    val msgList by mainViewModel.simpleMsgList.collectAsState()
+    val simpleMsgList by mainViewModel.simpleMsgList.collectAsState()
+
     val m by rememberUpdatedState(newValue = msg)
     val listState = rememberLazyListState()
+
+    mainViewModel.getAllMsg()
     DisposableEffect(m) {
+
         onDispose {
             scp.launch {
-                listState.animateScrollToItem(msgList.size)
+                listState.animateScrollToItem(simpleMsgList.size)
             }
         }
     }
     Scaffold {
         LazyColumn(state = listState, contentPadding = it) {
-            itemsIndexed(msgList) { i: Int, item: SimpleMsg ->
+            itemsIndexed(simpleMsgList) { i: Int, item: MsgDataBase ->
                 var popMenu by remember {
                     mutableStateOf(false)
                 }
@@ -73,7 +58,17 @@ fun MessageScreen(mainViewModel: MainViewModel, navController: NavHostController
                         .fillMaxWidth()
                         .combinedClickable(
                             onClick = {
-                                mainViewModel.changeChatRoomId(item.chatRoomId)
+                                if (item.groupId != null) {
+                                    mainViewModel.changeGroup(item.groupId, item.groupName ?: "")
+                                }
+                                if (item.to != null) {
+                                    mainViewModel.changeFriendId(
+                                        FriendData(
+                                            item.to,
+                                            item.toUserName
+                                        )
+                                    )
+                                }
                                 navController.navigate(NavScreen.ChatView.route)
                             },
                             onLongClick = {
@@ -107,9 +102,19 @@ fun MessageScreen(mainViewModel: MainViewModel, navController: NavHostController
                                 Column(
                                     verticalArrangement = Arrangement.Center,
                                 ) {
-                                    Text(text = item.chatRoomId, fontSize = 20.sp)
                                     Text(
-                                        text = item.nickName,
+                                        text = "${
+                                            item.groupName ?: item.toUserName ?: item.to
+                                            ?: "没有名字捏"
+                                        }",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        text = if (item.groupId == null) {
+                                            item.msg
+                                        } else {
+                                            "${item.userName}:${item.msg}"
+                                        },
                                         fontSize = 14.sp,
                                         color = Color.Black.copy(0.4f)
                                     )
@@ -125,7 +130,7 @@ fun MessageScreen(mainViewModel: MainViewModel, navController: NavHostController
 
                     }
 
-                    if (i != msgList.size - 1) {
+                    if (i != simpleMsgList.size - 1) {
                         Divider(
                             modifier = Modifier.padding(start = 60.dp, end = 10.dp),
                             color = gray.copy(alpha = 0.2f)

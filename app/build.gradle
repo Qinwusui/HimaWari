@@ -1,8 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
-    id 'com.google.devtools.ksp' version '1.7.21-1.0.8'
-//    id 'kotlinx-serialization'
+    id 'com.google.devtools.ksp' version '1.8.10-1.0.9'
+    id 'kotlinx-serialization'
 }
 
 android {
@@ -14,7 +14,7 @@ android {
             enableV4Signing true
         }
         release {
-            storeFile file('D:\\yu.jks')
+            storeFile file('D:\\halo.jks')
             storePassword 'Qinsansui233...'
             keyAlias 'wusui'
             keyPassword 'Qinsansui233...'
@@ -66,15 +66,15 @@ android {
             signingConfig signingConfigs.release
             zipAlignEnabled true     //Zipalign优化
             shrinkResources true    // 移除无用的resource文件
-            applicationVariants.all { variant ->
-                variant.outputs.all { output ->
+            applicationVariants.configureEach { variant ->
+                variant.outputs.configureEach { output ->
                     def outputFile = output.outputFile
-                    def fileName=""
-                    def date =new Date().format("yyyy_MM_dd", TimeZone.getTimeZone("GMT+08"))
+                    def fileName = ""
+                    def date = new Date().format("yyyy_MM_dd", TimeZone.getTimeZone("GMT+08"))
                     if (outputFile != null && outputFile.name.endsWith('.apk')) {
-                        if (variant.buildType.name.equals('release')) {//如果是release包
-                            fileName = "${defaultConfig.versionName}.apk"
-                        } else if (variant.buildType.name.equals('debug')) {//如果是debug包
+                        if (variant.buildType.name == 'release') {//如果是release包
+                            fileName = "Hima_v${defaultConfig.versionName}.apk"
+                        } else if (variant.buildType.name == 'debug') {//如果是debug包
                             fileName = "${defaultConfig.versionName}.apk"
                         }
 
@@ -85,22 +85,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '1.8'
     }
     buildFeatures {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.4.0-alpha02'
-    }
-    packagingOptions {
-        resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-        }
+        kotlinCompilerExtensionVersion '1.4.3'
     }
 }
 ksp {
@@ -108,25 +103,24 @@ ksp {
     arg("room.incremental", "true")
 }
 dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.7.10-1.0.6")
-
+    implementation("com.google.devtools.ksp:symbol-processing-api:1.8.10-1.0.9")
     implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.1'
-    implementation 'androidx.activity:activity-compose:1.6.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.activity:activity-compose:1.7.0'
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation 'androidx.compose.material3:material3:1.0.0-beta02'
-    implementation "androidx.compose.material:material:1.3.0-rc01"
+    implementation 'androidx.compose.material3:material3:1.1.0-beta01'
+    implementation "androidx.compose.material:material:1.5.0-alpha01"
 
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
     //调色板
     implementation 'androidx.palette:palette-ktx:1.0.0'
-    def lifecycle_version = "2.6.0-alpha02"
+    def lifecycle_version = "2.6.1"
 // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
     // Saved state module for ViewModel
@@ -141,33 +135,34 @@ dependencies {
     implementation 'io.coil-kt:coil-compose:2.1.0'
     //systemuicontroller
     implementation 'com.google.accompanist:accompanist-systemuicontroller:0.25.1'
-    implementation "androidx.navigation:navigation-compose:2.6.0-alpha01"
+    implementation "androidx.navigation:navigation-compose:2.6.0-alpha08"
 //    runtimeOnly("io.ktor:ktor-client-core:2.0.0-ide-debug-eap-225")
     def paging_version = "3.1.1"
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
-    implementation "androidx.paging:paging-compose:1.0.0-alpha16"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.20"
-    def work_version = "2.7.1"
+    implementation "androidx.paging:paging-compose:1.0.0-alpha18"
+    def work_version = "2.8.0"
     // Kotlin + coroutines
     implementation "androidx.work:work-runtime-ktx:$work_version"
-    //Ktor1
-//    implementation "io.ktor:ktor-client-cio:2.1.3"
-    implementation "io.ktor:ktor-client-okhttp:2.1.3"
 
-    implementation 'io.ktor:ktor-client-content-negotiation:2.1.3'
-    runtimeOnly "io.ktor:ktor-client-core:2.1.3"
-    implementation 'io.ktor:ktor-client-serialization:2.1.3'
-    implementation "io.ktor:ktor-serialization-gson:2.1.3"
-    implementation 'com.google.code.gson:gson:2.10'
 
-//    implementation "io.ktor:ktor-serialization-kotlinx-json:2.1.1"
+    implementation "io.ktor:ktor-client-okhttp:2.2.3"
+    implementation "io.ktor:ktor-client-content-negotiation:2.2.3"
+    runtimeOnly "io.ktor:ktor-client-core:2.2.3"
+    runtimeOnly "io.ktor:ktor-client-android:2.2.3"
+    implementation "io.ktor:ktor-client-auth-basic:1.6.8"
+    runtimeOnly "io.ktor:ktor-client-auth:2.2.4"
+
+    implementation "io.ktor:ktor-client-serialization:2.2.3"
+    implementation "com.google.code.gson:gson:2.10"
+    implementation "io.ktor:ktor-serialization-gson:2.2.3"
+    implementation "io.ktor:ktor-serialization-kotlinx-json:2.2.3"
+    implementation "io.ktor:ktor-client-websockets:2.2.3"
+
 
     implementation "androidx.constraintlayout:constraintlayout-compose:1.0.1"
-    implementation "io.ktor:ktor-client-websockets:2.1.1"
-
     //WaveView
     implementation "com.github.john990:WaveView:v0.9"
-    def  room_version = "2.4.3"
+    def room_version = "2.5.0"
     implementation "androidx.room:room-runtime:$room_version"
     annotationProcessor "androidx.room:room-compiler:$room_version"
     ksp "androidx.room:room-compiler:$room_version"

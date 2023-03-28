@@ -52,7 +52,7 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
     var input by remember {
         mutableStateOf("")
     }
-    val _qq by mainViewModel.qq.collectAsState()
+    val _qq by mainViewModel.userId.collectAsState()
     val qq by rememberUpdatedState(newValue = _qq)
 
     var verifyInfo by remember {
@@ -61,8 +61,8 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
     var showDialog by remember {
         mutableStateOf(false)
     }
-    var toQQ by remember {
-        mutableStateOf("")
+    var to by remember {
+        mutableStateOf(0)
     }
     AnimatedVisibility(visible = showDialog) {
         AlertDialog(
@@ -84,14 +84,14 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                             Text(text = "验证信息")
                         },
                         colors = TextFieldDefaults.textFieldColors(
-                            textColor = deep_gray,
+                            focusedTextColor = deep_gray,
                             focusedIndicatorColor = deep_gray,
                             unfocusedIndicatorColor = deep_gray,
                             unfocusedLabelColor = deep_gray,
                             containerColor = Color.Transparent,
                             cursorColor = deep_gray,
                             focusedLabelColor = deep_gray,
-                            placeholderColor = deep_gray
+                            focusedPlaceholderColor = deep_gray
                         )
                     )
                 }
@@ -101,7 +101,7 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                     if (verifyInfo.isEmpty()) {
                         "填点东西好让别人知道你是不是卖茶叶的嘛".toastShort()
                     } else {
-                        mainViewModel.sendAddFriendMsg(qq, toQQ, verifyInfo)
+                        mainViewModel.sendAddFriendMsg(qq, to, verifyInfo)
 
                         showDialog = false
                     }
@@ -137,7 +137,14 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                     )
                 }
                 Text(text = "搜搜")
-                IconButton(onClick = { mainViewModel.querySearchUserList(input) }) {
+                IconButton(onClick = {
+                    val friendId = input.toIntOrNull()
+                    if (friendId == null) {
+                        "请输入正确的好友ID".toastShort()
+                    } else {
+                        mainViewModel.querySearchUserList(friendId)
+                    }
+                }) {
                     Icon(
                         imageVector = Icons.TwoTone.Search,
                         contentDescription = null,
@@ -166,18 +173,18 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                         Text(text = "输入qq或用户名进行模糊查询")
                     },
                     colors = TextFieldDefaults.textFieldColors(
-                        textColor = deep_gray,
+                        focusedTextColor = deep_gray,
                         focusedIndicatorColor = deep_gray,
                         unfocusedIndicatorColor = deep_gray,
                         unfocusedLabelColor = deep_gray,
                         containerColor = Color.Transparent,
                         cursorColor = deep_gray,
                         focusedLabelColor = deep_gray,
-                        placeholderColor = deep_gray
+                        focusedPlaceholderColor = deep_gray
                     )
                 )
             }
-            if (searchList.list.isNotEmpty()) {
+            if ((searchList.info ?: mutableListOf()).isNotEmpty()) {
                 item {
                     Row(
                         modifier = Modifier
@@ -190,13 +197,13 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                         Text(text = "QQ")
                     }
                 }
-                itemsIndexed(searchList.list) { index, item ->
+                itemsIndexed(searchList.info ?: mutableListOf()) { index, item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                toQQ = item.qq
-                                if (item.qq == qq) {
+                                to = item.id ?: 0
+                                if (item.id == qq) {
                                     "不能添加自己哦~".toastShort()
                                 } else {
                                     showDialog = true
@@ -206,8 +213,8 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = item.uName)
-                        Text(text = item.qq)
+                        Text(text = "${item.userName}")
+                        Text(text = "${item.id}")
                     }
                 }
             }

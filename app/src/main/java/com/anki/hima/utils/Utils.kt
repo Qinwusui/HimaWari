@@ -27,5 +27,5 @@ fun String.encodeToLog(pwd: String) = "$this||$pwd".encodeBase64()
 
 
 enum class TypeByUser {
-    UserName, QQ, Pwd
+    UserName, UserId, Pwd
 }

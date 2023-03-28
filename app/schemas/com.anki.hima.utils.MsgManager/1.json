@@ -1,0 +1,82 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "bd0298bfd08ad52647924455541a87cf",
+    "entities": [
+      {
+        "tableName": "MsgList",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`msgIndex` INTEGER PRIMARY KEY AUTOINCREMENT, `nickName` TEXT NOT NULL, `from` INTEGER NOT NULL, `chatRoomId` INTEGER, `chatRoomName` TEXT, `to` INTEGER, `toNickName` TEXT, `msg` TEXT NOT NULL, `timeStamp` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "msgIndex",
+            "columnName": "msgIndex",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "userName",
+            "columnName": "nickName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "from",
+            "columnName": "from",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "chatRoomId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "groupName",
+            "columnName": "chatRoomName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "to",
+            "columnName": "to",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "toUserName",
+            "columnName": "toNickName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "msg",
+            "columnName": "msg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "timeStamp",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "msgIndex"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bd0298bfd08ad52647924455541a87cf')"
+    ]
+  }
+}

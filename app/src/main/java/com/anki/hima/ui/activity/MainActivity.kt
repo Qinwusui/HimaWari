@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
@@ -28,6 +31,7 @@ import com.anki.hima.ui.screens.chat.ChatScreen
 import com.anki.hima.ui.screens.user.UserScreen
 import com.anki.hima.ui.screens.user.UserSearchScreen
 import com.anki.hima.ui.theme.HimaWariTheme
+import com.anki.hima.utils.toastShort
 import com.anki.hima.viewmodel.MainViewModel
 
 
@@ -46,6 +50,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             HimaWariTheme {
+                val _addState by mainViewModel.addState.collectAsState()
+                val addState by rememberUpdatedState(newValue = _addState)
+                if (addState.code == 0) {
+                    addState.msg?.toastShort()
+                    mainViewModel.getGroupList()
+                }
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -58,7 +68,11 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         composable(NavScreen.MainView.route) {
-                            NavScreen(mainViewModel = mainViewModel, navController = navController)
+                            NavScreen(
+                                mainViewModel = mainViewModel,
+                                navController = navController,
+                                addState.code == 0
+                            )
                         }
                         composable(NavScreen.ChatView.route) {
                             ChatScreen(mainViewModel = mainViewModel, navController = navController)
