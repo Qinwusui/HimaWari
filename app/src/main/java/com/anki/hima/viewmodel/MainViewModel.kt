@@ -150,7 +150,9 @@ class MainViewModel(
     private fun autoLogin() {
         viewModelScope.launch {
             repo.autoLogin().collect {
-                _login.value = it
+                _login.value = it.code == 0
+                _name.value = it.info?.userName ?: ""
+                _userId.value = it.info?.id ?: 0
             }
         }
     }
@@ -159,6 +161,8 @@ class MainViewModel(
         viewModelScope.launch {
             repo.login(id = id, pwd).collect {
                 _login.value = it.code == 0
+                _name.value = it.info?.userName ?: ""
+                _userId.value = it.info?.id ?: 0
                 if (it.code == 0) {
                     initWebSocket()
                 }
@@ -171,6 +175,7 @@ class MainViewModel(
             repo.signIn(uName, pwd).collect {
                 if (it.code == 0) {
                     _sign.value = true
+                    _userId.value = it.info ?: 0
                     withContext(Dispatchers.Main) {
                         it.msg?.toastShort()
                     }
@@ -262,9 +267,9 @@ class MainViewModel(
     //模糊查询用户
     private val _respSearchList = MutableStateFlow(ResInfo<List<User>>())
     val respSearchList = _respSearchList.asStateFlow()
-    fun querySearchUserList(friendId: Int) {
+    fun querySearchUserList(uid: Int? = null, name: String? = null) {
         viewModelScope.launch {
-            repo.searchFriend(friendId).collect {
+            repo.searchFriend(uid, name).collect {
                 _respSearchList.value = it
             }
         }

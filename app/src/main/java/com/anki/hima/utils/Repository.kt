@@ -15,6 +15,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.serialization.kotlinx.*
@@ -196,8 +197,7 @@ object Repository {
                 user
             )
         }
-        val b = req.body<ResInfo<Any?>>()
-        b.toString().loge()
+        val b = req.body<ResInfo<User>>()
         if (b.code == 0) {
             val content = json.toJson(user).encodeBase64()
             saveUser(content)
@@ -215,27 +215,19 @@ object Repository {
     //自动登录
     fun autoLogin() = flowByIO {
         val content = getLocalContent().decodeBase64String()
-        content.loge()
-        if (content == "") return@flowByIO false
+        if (content == "") return@flowByIO ResInfo<User>()
         val user = json.fromJson(content, User::class.java)
         val req = client.post("$BASE_URL/user/login") {
-            headers {
-                append(HttpHeaders.ContentType, "application/json")
-            }
+            header(HttpHeaders.ContentType, "application/json")
             setBody(
                 user
             )
         }
-        try {
-            val b = req.body<ResInfo<Any?>>()
-            b.toString().loge()
-            if (b.code == 0) {
-                saveUser(content.encodeBase64())
-            }
-            b.code == 0
-        } catch (e: Exception) {
-            false
+        val b = req.body<ResInfo<User>>()
+        if (b.code == 0) {
+            saveUser(content.encodeBase64())
         }
+        b
 
     }
 
@@ -272,18 +264,19 @@ object Repository {
     }
 
     //好友模糊查找
-    fun searchFriend(friendId: Int) = flowByIO {
+    fun searchFriend(userId: Int?, name: String?) = flowByIO {
         val res = client.post("$BASE_URL/friends/search") {
             header(HttpHeaders.ContentType, "application/json")
             setBody(
-                FriendData(
-                    friendId = friendId,
-                    friendName = null,
+                User(
+                    id = userId,
+                    userName = name,
+                    pwd = null
                 )
             )
         }
         val b = res.body<ResInfo<List<User>>>()
-        b.toString().loge()
+        res.bodyAsText().loge()
         b
     }
 
@@ -298,7 +291,6 @@ object Repository {
                     from = userId,
                     to = to,
                     msg = msg,
-                    createdTime = null
                 )
             )
         }
@@ -322,12 +314,14 @@ object Repository {
                 )
             )
         }
-        res.body<ResInfo<Any?>>()
+        val b = res.body<ResInfo<Any?>>()
+        res.bodyAsText().loge()
+        b
     }
 
     //获取验证消息
     fun queryApplyList(userId: Int) = flowByIO {
-        val res = client.post("$BASE_URL/friends/list") {
+        val res = client.post("$BASE_URL/friends/applyList") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
             }
@@ -339,7 +333,9 @@ object Repository {
                 )
             )
         }
-        res.body<ResInfo<List<FriendApply>>>()
+        val b = res.body<ResInfo<List<FriendApply>>>()
+        res.bodyAsText().loge()
+        b
     }
 
     //新建群组

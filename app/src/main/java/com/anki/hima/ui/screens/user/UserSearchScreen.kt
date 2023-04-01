@@ -52,8 +52,8 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
     var input by remember {
         mutableStateOf("")
     }
-    val _qq by mainViewModel.userId.collectAsState()
-    val qq by rememberUpdatedState(newValue = _qq)
+    val uid by mainViewModel.userId.collectAsState()
+    val id by rememberUpdatedState(newValue = uid)
 
     var verifyInfo by remember {
         mutableStateOf("")
@@ -101,7 +101,7 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                     if (verifyInfo.isEmpty()) {
                         "填点东西好让别人知道你是不是卖茶叶的嘛".toastShort()
                     } else {
-                        mainViewModel.sendAddFriendMsg(qq, to, verifyInfo)
+                        mainViewModel.sendAddFriendMsg(id, to, verifyInfo)
 
                         showDialog = false
                     }
@@ -138,11 +138,16 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                 }
                 Text(text = "搜搜")
                 IconButton(onClick = {
-                    val friendId = input.toIntOrNull()
-                    if (friendId == null) {
+                    if (input == "") {
                         "请输入正确的好友ID".toastShort()
                     } else {
-                        mainViewModel.querySearchUserList(friendId)
+                        val sId = input.toIntOrNull()
+                        if (sId != null) {
+                            mainViewModel.querySearchUserList(uid = sId)
+                        } else {
+                            mainViewModel.querySearchUserList(name = input)
+                        }
+
                     }
                 }) {
                     Icon(
@@ -170,7 +175,7 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = {
-                        Text(text = "输入qq或用户名进行模糊查询")
+                        Text(text = "输入id或用户名进行模糊查询")
                     },
                     colors = TextFieldDefaults.textFieldColors(
                         focusedTextColor = deep_gray,
@@ -203,7 +208,7 @@ fun UserSearchScreen(mainViewModel: MainViewModel, navController: NavController)
                             .fillMaxWidth()
                             .clickable {
                                 to = item.id ?: 0
-                                if (item.id == qq) {
+                                if (item.id == id) {
                                     "不能添加自己哦~".toastShort()
                                 } else {
                                     showDialog = true

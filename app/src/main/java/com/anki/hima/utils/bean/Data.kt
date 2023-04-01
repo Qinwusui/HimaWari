@@ -1,6 +1,10 @@
 package com.anki.hima.utils.bean
 
 import kotlinx.serialization.Serializable
+import androidx.annotation.Keep
+
+import kotlinx.serialization.SerialName
+
 
 
 /**
@@ -18,7 +22,6 @@ data class MsgData(
     val toNickName: String?
 )
 
-
 @Serializable
 data class User(
     val id: Int?,
@@ -32,7 +35,6 @@ data class FriendApply(
     val from: Int,
     val to: Int,
     val msg: String,
-    val createdTime: String?
 )
 
 @Serializable

@@ -66,7 +66,7 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
         mutableStateOf(false)
     }
     var friendApply by remember {
-        mutableStateOf(FriendApply(0, 0, "", null))
+        mutableStateOf(FriendApply(0, 0, ""))
     }
     AnimatedVisibility(visible = showDialog) {
         AlertDialog(onDismissRequest = { showDialog = false }, title = {
@@ -140,13 +140,7 @@ fun ContactScreen(mainViewModel: MainViewModel, navController: NavHostController
                             Text(text = "验证消息：${item.msg}")
                         }
                     }
-                    Text(
-                        text = "${item.createdTime}",
-                        fontSize = 10.sp,
-                        style = TextStyle.Default.copy(
-                            color = deep_gray.copy(alpha = 0.7f)
-                        )
-                    )
+
                 }
             }
             item {
